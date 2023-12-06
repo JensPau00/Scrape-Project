@@ -2,7 +2,7 @@ from pprint import pprint
 
 import requests
 import re
-
+import time
 from selenium.webdriver.common.by import By
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -12,6 +12,7 @@ info = []
 def charlottebusinessbrokers():
     page = load_site('https://www.charlottebusinessbrokers.com/Listings/Listings.php')
     html = page.text
+    print(html)
     metaConRE = re.compile("<meta.*?>")
     sourceRE = re.compile('href="Listing_detail.*?"')
     source = sourceRE.findall(html)
@@ -43,7 +44,7 @@ def charlottebusinessbrokers():
     csvAppend(info)
 
 def gottesmanscrape():
-    page = load_site('https://gottesman-company.com/opportunities/')
+    page = load_site('https://gottesman-company.com/opportunities/list/')
     html = page.text
     print(html)
     sellerSource = re.compile('href="https://gottesman-company.com/active_sellers/.*?"')
@@ -56,9 +57,9 @@ def gottesmanscrape():
         """<td class="seller-industry">.*?</td><td class="seller-sales">.*?</td><td class="seller-ebitda">.*?</td>""")
     count = 0
     for each in allInfoRE.findall(html):
-
-        each = re.sub('<.*?>',' ',each)
-        each.replace(',','')
+        print(each)
+        each = re.sub('<.*?>', ' ', each)
+        each.replace(',', '')
         each = each.split('$')
         for every in [1,2]:
             each[every] = each[every].replace('M','')
@@ -66,8 +67,8 @@ def gottesmanscrape():
             try:
                 each[every]=str(float(each[every])*1000000)
             except:
-                each[every] ="NA"
-        eachSoFar[count]=eachSoFar[count].replace('href','')
+                each[every] = "NA"
+        eachSoFar[count] = eachSoFar[count].replace('href','')
         eachSoFar[count] = eachSoFar[count].replace('"','')
         eachSoFar[count] = eachSoFar[count][1:]
         info.append([eachSoFar[count],each[0],"NA",each[1],"NA",each[2]])
@@ -83,20 +84,95 @@ def csvAppend(rows):
         writer = csv.writer(f)
         writer.writerows(rows)
 
-def greenAndCo():
-    driver = webdriver.Chrome()
-    driver.get("https://greenandco.biz/search-listings/")
-    print(driver.title)
-    driver.find_element(By.XPATH,'/html/body/table/tbody/tr/td/form/div[3]/input[1]')
-    print(driver.current_url)
-    driver.close()
+def axial():
+    browser = webdriver.Chrome()
+    browser.get("https://www.axial.net/closed-deals/")
+    new_height = 0
+    Advisors = []
+    acquirers = []
+    Businesses =[]
+    Entry = []
+    allText =[]
+    execepts = []
+    count = 0
+    while True:
+        elements = (browser.find_elements(By.CSS_SELECTOR, 'article.expgrid1-entry'))
+        for each in elements:
+            raw_text = each.get_attribute("data-id")
+            start_text = raw_text
+            if raw_text not in allText:
+                count+=1
+                allText.append(raw_text)
+                raw_text = raw_text.replace("-", " ")
+                raw_text = raw_text.split('advises')
+                if len(raw_text)==1:
+                    raw_text = raw_text[0].split('advised-by')
+                    try:
+                        if len(raw_text[0].split("acquired"))!=1:
+                            Advisor = raw_text[1]
+                            raw_text = raw_text[0].split("acquired")
+                            acquirer = raw_text[0]
+                            bus = raw_text[1]
+
+                    except:
+                        raw_text = raw_text
+                    if len(raw_text)==1:
+                        print("here!")
+                        raw_text = raw_text[0].split('acquired')
+                        Advisor = "NA"
+                        try:
+                            acquirer = raw_text[0]
+                            bus = raw_text[1]
+                        except:
+                            if len(raw_text[0].split('acquires'))==1:
+                                Advisor = raw_text[0]
+                                acquirer = "unchecked"
+                                bus = "unchecked"
+                            else:
+                                raw_text = raw_text[0].split('acquires')
+                                acquirer = raw_text[0]
+                                bus = raw_text[1]
+                    else:
+                        Advisor = raw_text[0]
+                        acquirer = "unchecked"
+                        bus = "unchecked"
+                else:
+                    Advisor = raw_text[0]
+                    try:
+                        acquirer = raw_text[1].split('on acquisition by')[0]
+                        bus = raw_text[1].split('on acquisition by')[1]
+                    except:
+                        try:
+                            acquirer = raw_text[1].split('in acquisition by')[0]
+                            bus = raw_text[1].split('in acquisition by')[1]
+                        except:
+                            acquirer = raw_text[1]
+                            bus = "uncheched exeption"
+                Advisors.append(Advisor)
+                acquirers.append(acquirer)
+                Businesses.append(bus)
+                Entry.append([start_text,Advisor,acquirer,bus])
+        browser.execute_script(f"window.scrollTo(0, document.body.scrollHeight/20*{new_height});")
+        time.sleep(1)
+        new_height += 1
+
+        if new_height == 21:
+            break
+    print(count)
+
+    with open('Advi.csv', 'w', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['source','Advisors','Aqurirers',"Busniesses"])
+        for each in Entry:
+            writer.writerow(each)
+
 
 def numberOfPages(number,busReg):
         for each in range(1, number):
             page = load_site(f'https://www.bizquest.com/businesses-for-sale/page-{each}/')
             html = page.text
             bus = busReg.findall(html)
-            eachSoFar =[]
+            eachSoFar = []
             for each in bus:
                 each = each.split('"')[1]
                 if each not in eachSoFar:
@@ -165,7 +241,4 @@ def bizquest():
 
 
 if __name__ == '__main__':
-    gottesmanscrape()
-    charlottebusinessbrokers()
-
-
+    axial()
