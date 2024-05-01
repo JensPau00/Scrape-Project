@@ -10,38 +10,9 @@ from selenium.webdriver.common.keys import Keys
 import csv
 info = []
 def charlottebusinessbrokers():
-    page = load_site('https://www.charlottebusinessbrokers.com/Listings/Listings.php')
+    page = load_site("https://www.bizbuysell.com/business-brokers/directory/")
     html = page.text
     print(html)
-    metaConRE = re.compile("<meta.*?>")
-    sourceRE = re.compile('href="Listing_detail.*?"')
-    source = sourceRE.findall(html)
-    priceRE = re.compile('Business Price</td>.*?</td',re.DOTALL)
-    revenueRE = re.compile('Revenue</td>.*?[0-9].*?</td', re.DOTALL)
-    cashFlowRE = re.compile('Cash Flow</td>.*?[0-9].*?</td',re.DOTALL)
-    nameRE = re.compile('<title>.*?</script>',re.DOTALL)
-    info = []
-    for each in source:
-        url = 'https://www.charlottebusinessbrokers.com/Listings/'+each[6:-1]
-        page = load_site(url)
-        htmlBus = page.text
-        print(page.text)
-        name = nameRE.findall(htmlBus)
-        name = metaConRE.findall(name[0])
-        price = priceRE.findall(htmlBus)
-        rev = revenueRE.findall(htmlBus)
-        cash = cashFlowRE.findall(htmlBus)
-        price = price[0].split(';')[1].split('<')[0]
-        rev = rev[0].split('$')[1].split('<')[0]
-        cash = cash[0].split('$')[1].split('<')[0]
-        name = name[1].split('"')
-        price = price.replace(',',"")
-        rev = rev.replace(',','')
-        rev = rev.strip()
-        cash = cash.replace(',','')
-        cash = cash.strip()
-        info.append([url,name[1],price,rev,cash,'NA'])
-    csvAppend(info)
 
 def gottesmanscrape():
     page = load_site('https://gottesman-company.com/opportunities/list/')
@@ -83,10 +54,65 @@ def csvAppend(rows):
     with open('Deals.csv', 'a', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         writer.writerows(rows)
+def csvWriteBroker(rows):
+    with open('Brokers.csv', 'w', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Name','Telephone','Company','Website','Email'])
+def csvAppendBroker(rows):
+    with open('Brokers.csv.csv', 'a', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerows(rows)
+def BizBuySell():
+    browser = webdriver.Chrome()
+    browser.get("https://www.bizbuysell.com/business-brokers/directory/")
+    subPages = []
+    new_height = 0
+    Entry = []
+    elements = (browser.find_elements(By.CSS_SELECTOR, 'a.pointer.ng-star-inserted'))
+    telephoneRe = re.compile('href="tel:.*?"')
+    nameRe = re.compile('"name": ".*?"')
+    websiteRe = re.compile('rel="nofollow" href=".*?"')
+    CnameRe = re.compile('>Contact:.*?<')
+    for each in elements:
+        if each.get_attribute("href") not in subPages:
+            subPages.append(each.get_attribute("href"))
+        print(each.get_attribute("href"))
+    browser.close()
+    for every in range(2,243):
+        browser = webdriver.Chrome()
+        browser.get(f"https://www.bizbuysell.com/business-brokers/directory/{every}/")
+        elements = (browser.find_elements(By.CSS_SELECTOR, 'a.pointer.ng-star-inserted'))
+        for each in elements:
+            if each.get_attribute("href") not in subPages:
+                subPages.append(each.get_attribute("href"))
+            print(each.get_attribute("href"))
+        print("I'm going to sleep")
+        time.sleep(3)
+    for alls in subPages:
+        try:
+            browser = webdriver.Chrome()
+            browser.get(alls)
+            html = browser.page_source
+            telephone = telephoneRe.findall(html)
+            name = nameRe.findall(html)[0]
+            website = websiteRe.findall(html)[0]
+            Cname = CnameRe.findall(html)[0]
+            Entry.append([telephone,name,website,Cname, "NA"])[0]
+            browser.close()
+        except:
+            print(alls)
+        time.sleep(1)
+    with open('Brokers.csv', 'w', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['Name','Telephone','Company','Website','Email'])
+        for each in Entry:
+            writer.writerow(each)
+
+
 
 def axial():
     browser = webdriver.Chrome()
-    browser.get("https://www.axial.net/closed-deals/")
+    browser.get("https://www.bizbuysell.com/business-brokers/directory/")
     new_height = 0
     Advisors = []
     acquirers = []
@@ -241,4 +267,4 @@ def bizquest():
 
 
 if __name__ == '__main__':
-    axial()
+    BizBuySell()
