@@ -87,13 +87,13 @@ def BizBuySell():
                 subPages.append(each.get_attribute("href"))
             print(each.get_attribute("href"))
         print("I'm going to sleep")
-        time.sleep(3)
+        time.sleep(1)
     for alls in subPages:
         try:
             browser = webdriver.Chrome()
             browser.get(alls)
             html = browser.page_source
-            telephone = telephoneRe.findall(html)
+            telephone = telephoneRe.findall(html)[0]
             name = nameRe.findall(html)[0]
             website = websiteRe.findall(html)[0]
             Cname = CnameRe.findall(html)[0]
