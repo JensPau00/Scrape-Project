@@ -3,12 +3,14 @@ from pprint import pprint
 import requests
 import re
 import time
+
+from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from threading import Thread
 import csv
-
+ibbaEntry =[]
 info = []
 Entry = {}
 
@@ -18,41 +20,7 @@ def charlottebusinessbrokers():
     html = page.text
     print(html)
 
-def ibba():
-    state_names = ["Alaska", "Alabama", "Arkansas", "Arizona", "California", "Colorado",
-                   "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii",
-                   "Iowa", "Idaho", "Illinois", "Indiana", "Kansas", "Kentucky", "Louisiana", "Massachusetts",
-                   "Maryland", "Maine", "Michigan", "Minnesota", "Missouri", "Mississippi", "Montana", "North-Carolina",
-                   "North-Dakota", "Nebraska", "New-Hampshire", "New-Jersey", "New-Mexico", "Nevada", "New-York",
-                   "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode-Island", "South Carolina",
-                   "South-Dakota", "Tennessee", "Texas", "Utah", "Virginia", "Vermont", "Washington",
-                   "Wisconsin", "West-Virginia", "Wyoming"]
-    with open('ibbabrokers.csv', 'w', encoding='UTF8', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(["Name", "Telephone", "Company", "Website", "Email"])
-    for each in state_names:
-        try:
-            browser = webdriver.Chrome()
-            browser.get(f'https://www.ibba.org/state/{each}/')
-            html = browser.current_url
-            elements = (browser.find_elements(By.CSS_SELECTOR, 'div.brokers__item'))
-            links = []
-            for every in elements:
-                every = every.find_elements(By.TAG_NAME,'a')[0]
-                every = every.get_attribute('href')
-                links.append(every)
-            print(links)
-            telephoneRe = re.compile('href="tel:.*?"')
-            nameRe = re.compile('data-brokerpath=".*?"')
-            websiteRe = re.compile('rel="nofollow" href=".*?"')
-            CnameRe = re.compile('<div class="brokers__item--company">.*?</span')
-            with open('ibbabrokers.csv', 'a', encoding='UTF8', newline='') as f:  # THIS IS TO APPEND TO THE FILE
-                    writer = csv.writer(f)
-                    for i in Entry:
-                        for each in Entry[i]:
-                            writer.writerow(each)
-        except:
-            print(f"{each} did not print")
+
 def threaded_Biz(subPages, telephoneRe, nameRe, websiteRe, CnameRe, thread):
     print(f"executing{thread}")
     for alls in subPages:
@@ -77,7 +45,43 @@ def threaded_Biz(subPages, telephoneRe, nameRe, websiteRe, CnameRe, thread):
             Cname ="NA"
         Entry[thread].append([telephone, name, website, Cname, "NA"])
         browser.close()
-
+def threaded_ibba(link):
+    browser = webdriver.Chrome()
+    browser.get(link)
+    # content > div.content-area > div > section > div.brokers__profile--left > div.brokers__profile--leftLink > a:nth-child(1)
+    telephone_Email = (browser.find_elements(By.CSS_SELECTOR, 'div.brokers__profile--leftPhone'))
+    Website = (browser.find_element(By.CSS_SELECTOR, 'div.brokers__profile--leftLink a'))
+    name = (browser.find_elements(By.CSS_SELECTOR, 'span.breadcrumb_last'))
+    Company = (browser.find_elements(By.CSS_SELECTOR, 'div.brokers__profile--leftAddress'))
+    tele = "NA"
+    email ="NA"
+    website ="NA"
+    company = "NA"
+    try:
+            print(Website.get_attribute('href'))
+    except:
+        pass
+    try:
+        name = name[0].text
+    except:
+        pass
+    try:
+        tele = telephone_Email[0].text
+    except:
+        pass
+    try:
+        email = telephone_Email[1].text
+    except:
+        pass
+    try:
+        website = Website.get_attribute("href")
+    except:
+        pass
+    try:
+        company = Company[0].text
+    except:
+        pass
+    ibbaEntry.append([name,tele,company,website,email])
 
 def gottesmanscrape():
     page = load_site('https://gottesman-company.com/opportunities/list/')
@@ -111,7 +115,89 @@ def gottesmanscrape():
         count += 1
     csvWrite(info)
 
+def ibba():
+    global ibbaEntry
+    state_names = ["Alaska", "Alabama", "Arkansas", "Arizona", "California", "Colorado",
+                   "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii",
+                   "Iowa", "Idaho", "Illinois", "Indiana", "Kansas", "Kentucky", "Louisiana", "Massachusetts",
+                   "Maryland", "Maine", "Michigan", "Minnesota", "Missouri", "Mississippi", "Montana", "North-Carolina",
+                   "North-Dakota", "Nebraska", "New-Hampshire", "New-Jersey", "New-Mexico", "Nevada", "New-York",
+                   "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode-Island", "South-Carolina",
+                   "South-Dakota", "Tennessee", "Texas", "Utah", "Virginia", "Vermont", "Washington",
+                   "Wisconsin", "West-Virginia", "Wyoming"]
+    with open('ibbabrokers.csv', 'w', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Name", "Telephone", "Company", "Website", "Email"])
+    links = []
+    for each in state_names:
+        try:
+            browser = webdriver.Chrome()
+            browser.get(f'https://www.ibba.org/state/{each}/')
+            html = browser.page_source
+            elements = (browser.find_elements(By.CSS_SELECTOR, 'div.brokers__item'))
+            for every in elements:
+                every = every.find_elements(By.TAG_NAME,'a')[0]
+                every = every.get_attribute('href')
+                links.append(every)
+            html = browser.page_source
+        except:
+            print(f"{each} did not print")
+    chunks = [links[x:x + 15] for x in range(0, len(links), 15)]
+    print(chunks)
+    threads = []
+    for alls in chunks:
+        for link in alls:
+            threads.append(Thread(target=threaded_ibba, args=[link]))
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        with open('ibbabrokers.csv', 'a', encoding='UTF8', newline='') as f:
+            print("here!")
+            print(ibbaEntry)
+            writer = csv.writer(f)
+            for i in ibbaEntry:
+                    writer.writerow(i)
+        threads = []
+        ibbaEntry =[]
 
+    """
+    for each in links:
+    with open('ibbabrokers.csv', 'a', encoding='UTF8', newline='') as f:  # THIS IS TO APPEND TO THE FILE
+                    writer = csv.writer(f)
+                    for i in Entry:
+                        for each in Entry[i]:
+                            writer.writerow(each)"""
+
+    '''
+    sellerSource = re.compile('href="https://gottesman-company.com/active_sellers/.*?"')
+    sources = sellerSource.findall(html)
+    eachSoFar = []
+    for each in sources:
+        if each not in eachSoFar:
+            eachSoFar.append(each)
+    allInfoRE = re.compile(
+        """<td class="seller-industry">.*?</td><td class="seller-sales">.*?</td><td class="seller-ebitda">.*?</td>""")
+    count = 0
+    for each in allInfoRE.findall(html):
+        print(each)
+        each = re.sub('<.*?>', ' ', each)
+        each.replace(',', '')
+        each = each.split('$')
+        for every in [1, 2]:
+            each[every] = each[every].replace('M', '')
+            each[every] = each[every].replace(' ', '')
+            try:
+                each[every] = str(float(each[every]) * 1000000)
+            except:
+                each[every] = "NA"
+        eachSoFar[count] = eachSoFar[count].replace('href', '')
+        eachSoFar[count] = eachSoFar[count].replace('"', '')
+        eachSoFar[count] = eachSoFar[count][1:]
+        info.append([eachSoFar[count], each[0], "NA", each[1], "NA", each[2]])
+        count += 1
+    csvWrite(info)
+'''
 def csvWrite(rows):
     with open('Deals.csv', 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
@@ -192,7 +278,6 @@ def BizBuySell():
         subPages3 = set()
         subPages4 = set()
         Entry = {"1": [], "2": [], "3": [], "4": []}
-
 
 def axial():
     browser = webdriver.Chrome()
@@ -359,3 +444,4 @@ def bizquest():
 if __name__ == '__main__':
     ibba()
     # csvWriteBroker()
+
