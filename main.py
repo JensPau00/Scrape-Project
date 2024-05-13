@@ -18,7 +18,41 @@ def charlottebusinessbrokers():
     html = page.text
     print(html)
 
-
+def ibba():
+    state_names = ["Alaska", "Alabama", "Arkansas", "Arizona", "California", "Colorado",
+                   "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii",
+                   "Iowa", "Idaho", "Illinois", "Indiana", "Kansas", "Kentucky", "Louisiana", "Massachusetts",
+                   "Maryland", "Maine", "Michigan", "Minnesota", "Missouri", "Mississippi", "Montana", "North-Carolina",
+                   "North-Dakota", "Nebraska", "New-Hampshire", "New-Jersey", "New-Mexico", "Nevada", "New-York",
+                   "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode-Island", "South Carolina",
+                   "South-Dakota", "Tennessee", "Texas", "Utah", "Virginia", "Vermont", "Washington",
+                   "Wisconsin", "West-Virginia", "Wyoming"]
+    with open('ibbabrokers.csv', 'w', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["Name", "Telephone", "Company", "Website", "Email"])
+    for each in state_names:
+        try:
+            browser = webdriver.Chrome()
+            browser.get(f'https://www.ibba.org/state/{each}/')
+            html = browser.current_url
+            elements = (browser.find_elements(By.CSS_SELECTOR, 'div.brokers__item'))
+            links = []
+            for every in elements:
+                every = every.find_elements(By.TAG_NAME,'a')[0]
+                every = every.get_attribute('href')
+                links.append(every)
+            print(links)
+            telephoneRe = re.compile('href="tel:.*?"')
+            nameRe = re.compile('data-brokerpath=".*?"')
+            websiteRe = re.compile('rel="nofollow" href=".*?"')
+            CnameRe = re.compile('<div class="brokers__item--company">.*?</span')
+            with open('ibbabrokers.csv', 'a', encoding='UTF8', newline='') as f:  # THIS IS TO APPEND TO THE FILE
+                    writer = csv.writer(f)
+                    for i in Entry:
+                        for each in Entry[i]:
+                            writer.writerow(each)
+        except:
+            print(f"{each} did not print")
 def threaded_Biz(subPages, telephoneRe, nameRe, websiteRe, CnameRe, thread):
     print(f"executing{thread}")
     for alls in subPages:
@@ -323,5 +357,5 @@ def bizquest():
 
 
 if __name__ == '__main__':
-    BizBuySell()
+    ibba()
     # csvWriteBroker()
