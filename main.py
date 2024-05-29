@@ -82,6 +82,37 @@ def threaded_ibba(link):
     except:
         pass
     ibbaEntry.append([name,tele,company,website,email])
+def axial995():
+    page = load_site('https://www.axial.net/forum/companies/business-brokers/')
+    soup = BeautifulSoup(page.text, 'html.parser')
+    brokers = soup.select('.teaser1-title a')
+    brokersMaster = set()
+    for each in brokers:
+        brokersMaster.add(each)
+
+    for each in range(2,31):
+        page = load_site(f'https://www.axial.net/forum/companies/business-brokers/{each}/')
+        soup = BeautifulSoup(page.text, 'html.parser')
+        brokers = soup.select('.teaser1-title a')
+        links = soup.select('.button1.-ghost')
+        print(len(brokersMaster))
+        for each in brokers:
+            brokersMaster.add(each)
+    print(len(brokersMaster))
+    count =0
+    brokersMaster = list(brokersMaster)
+    for each in range(len(brokersMaster)):
+        try:
+            brokersMaster[each] =str(brokersMaster[each])
+            brokersMaster[each] = brokersMaster[each].split('itemprop="name" target="_blank">')
+        except:
+            pass
+        print(brokersMaster[each])
+    with open('axial995.csv', 'w', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['link', 'Broker'])
+        for each in brokersMaster:
+            writer.writerow(each)
 
 def gottesmanscrape():
     page = load_site('https://gottesman-company.com/opportunities/list/')
